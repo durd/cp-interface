@@ -1,0 +1,4 @@
+﻿# phpipam api
+phpypam
+# checkpoint api
+git+https://github.com/CheckPointSW/cp_mgmt_api_python_sdk
