@@ -4,9 +4,9 @@ Adds VLAN-interfaces to CheckPoint firewalls and it's object on the Management-s
 
 ## Caveats
 
-This script has no error-checking except what is in the SDKs/APIs that I've used. It will add the wrong VLANs to the wrong gateway and policy!  
-Also, a feature. It will add all the VLANs as rule sections even if only one VLAN was added. Easy enough to clean up, but annoying.  
-I didn't have a proper test environment when making this, once I used the script in production I didn't have time to fix things, so it's quick and dirty and ugly. I blame my python-skills.
+* This script has no error-checking except what is in the SDKs/APIs that I've used. It will add the wrong VLANs to the wrong gateway and policy!
+* Also a feature. It will add all the VLANs as rule sections even if only one VLAN was added. Easy enough to clean up, but annoying.
+* I didn't have a proper test environment when making this, once I used the script in production I didn't have time to fix things, so it's quick and dirty and ugly. I blame my python-skills.
 
 ## Requisites
 
