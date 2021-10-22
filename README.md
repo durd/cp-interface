@@ -7,13 +7,13 @@ Adds VLAN-interfaces to CheckPoint firewalls and it's object on the Management-s
 * This script has no error-checking except what is in the SDKs/APIs that I've used. It will add the wrong VLANs to the wrong gateway and policy!
 * Also a feature. It will add all the VLANs as rule sections even if only one VLAN was added. Easy enough to clean up, but annoying.
 * I didn't have a proper test environment when making this, once I used the script in production I didn't have time to fix things, so it's quick and dirty and ugly. I blame my python-skills.
+* Also, I've never tested this with a complete cluster of at least 2 nodes. It's always been single node clusters. Should work, but yeah.
 
 ## Requisites
 
 * only adds NEW VLAN-interfaces
 * not tested if a VLAN is removed from IPAM
 * can not be used to "sync" a node to another node, please se `cp-clone-interface` instead
-* IP-adressering antar att kluster-ip, och båda nod-IP:na kommer efter varandra: vip, nod-1, nod-2
 * IP-addressing assumes that cluster-ip and both node-IPs are after eachother, ex: vip .1, node-1 .2, node-2 .3
 * cluster object IP needs to be reachable, ie create a vip for the cluster IP
 
@@ -27,7 +27,6 @@ Adds VLAN-interfaces to CheckPoint firewalls and it's object on the Management-s
   * A user for API
   * a group with read-permissions in the "Section" in question(, also permission to read certain VLANs??)
   * need an API application with read permission
-  * App security bör vara "SSL with User token" - en användare loggar in och får en ny token vid inloggning. Vid byggandet av script fungerade detta även med http.
   * "App security" should be "SSL with User token" - a user logs in and gets a new token at login. When building this script, HTTP worked even though SSL was selected.
 * data structure
   * the script reads from a parent subnet (supernet)
@@ -36,7 +35,6 @@ Adds VLAN-interfaces to CheckPoint firewalls and it's object on the Management-s
   * child subnets VLAN and VLAN-number are read
   * unused subnets MUST have at least three x's in its description: `subnet-description-xxx` to not be added in the firewalls
   * the script assumes that within a section there aren't any VLAN's that contain several subnets
-  * antagande är också att ett parent-subnät INTE innehåller ett nät som ska till en annan brandvägg
   * the script also assumes that a parent subnet does NOT contain a subnet that should belong to a different firewall. (
   * every subnet under a supernet that has a VLAN-id (not number) is added to the same firewall. Issues within your network could arrise
 
