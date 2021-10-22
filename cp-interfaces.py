@@ -222,6 +222,8 @@ def main():
     cpinterface = config.get_cp_interface()
     cpnodenr = config.get_cp_nodenr()
 
+    passive_name = None
+
     #print(childsubnets)
     #print(fwsections)
 
@@ -306,7 +308,7 @@ def main():
 
                     print('adding vlan', i['vlan-number'], 'to GW', active_name)
                     active_vlans['interfaces'].append(gaia_add_vlanifs(client_gaia, vlan, activepeerid, cpnodenr))
-        if 'passive_name' in locals():
+        if passive_name:
             passiveip = cluster['cluster-members'][passive_index]['ip-address']
             client_args_gaia = APIClientArgs(server=passiveip, unsafe=True, context='gaia_api')
             with APIClient(client_args_gaia) as client_gaia:
