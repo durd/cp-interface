@@ -10,7 +10,7 @@ from config import Config
 # silence certificate warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def ipam_search_childsubnets(parentsubnet):
+def ipam_search_childsubnets(pi, parentsubnet):
     parent = pi.get_entity('subnets', '/cidr/' + parentsubnet)
     #print(json.dumps(parent, indent=2))
 
@@ -27,6 +27,7 @@ def ipam_search_childsubnets(parentsubnet):
     subnets = []
     for k in childvlans:
         k['vlan-number'] = pi.get_entity('vlan', k['vlanId'])['number']
+        print('{} - {}'.format(k['vlan-number'], k['description']))
         subnets.append(k)
     #print(json.dumps(vlansubnets, indent=2))
     return subnets
@@ -38,7 +39,7 @@ def fwsections_build(subnets):
     #print(json.dumps(fwsections, indent=2))
     return fwsections
 
-def mgmt_add_sections(secs, package):
+def mgmt_add_sections(client_mgmt, secs, package):
     sections = list(secs)
     layer = package + ' Network'
     payload = {'layer': layer, 'position': 'bottom'}
@@ -51,7 +52,7 @@ def mgmt_add_sections(secs, package):
             #print(json.dumps(data, indent=2))
     return data
 
-def mgmt_get_target(policy):
+def mgmt_get_target(client_mgmt, policy):
     payload = {'name': policy}
     api_res = client_mgmt.api_call('show-package', payload)
     if api_res.success:
@@ -59,7 +60,7 @@ def mgmt_get_target(policy):
         #print(json.dumps(data, indent=2))
     return data['installation-targets'][0]['name']
 
-def mgmt_get_cluster(target):
+def mgmt_get_cluster(client_mgmt, target):
     payload = {'name': target}
     api_res = client_mgmt.api_call('show-simple-cluster', payload)
     if api_res.success:
@@ -106,7 +107,7 @@ def gaia_get_vlanifs(interface, ip, cpusername, cppassword):
             #print(json.dumps(data, indent=2))
         return data
 
-def gaia_add_vlanifs(vlans, peerid, cpnodenr):
+def gaia_add_vlanifs(client_gaia, vlans, peerid, cpnodenr):
     payload = dict(vlans)
     x = payload['ipv4-address'].split('.')
     if cpnodenr == 1:
@@ -123,14 +124,14 @@ def gaia_add_vlanifs(vlans, peerid, cpnodenr):
         #print(json.dumps(data, indent=2))
     return data
 
-def mgmt_add_vlanifs(payload):
+def mgmt_add_vlanifs(client_mgmt, payload):
     api_res = client_mgmt.api_call('set-simple-cluster', payload)
     if api_res.success:
         data = api_res.data
         #print(json.dumps(data, indent=2))
     return data
 
-def mgmt_show_task(taskid):
+def mgmt_show_task(client_mgmt, taskid):
     payload = dict(taskid)
     api_res = client_mgmt.api_call('show-task', payload)
     if api_res.success:
@@ -138,14 +139,28 @@ def mgmt_show_task(taskid):
         #print(json.dumps(data, indent=2))
     return data
 
-def mgmt_publish():
+def mgmt_publish(client_mgmt):
     api_res = client_mgmt.api_call('publish', {})
     if api_res.success:
         data = api_res.data
         #print(json.dumps(data, indent=2))
     return data
 
-def create_cluster_vlans():
+def mgmt_discard(client_mgmt):
+    api_res = client_mgmt.api_call('discard', {})
+    if api_res.success:
+        data = api_res.data
+        #print(json.dumps(data, indent=2))
+    return data
+
+def mgmt_logout(client_mgmt):
+    api_res = client_mgmt.api_call('logout', {})
+    if api_res.success:
+        data = api_res.data
+        #print(json.dumps(data, indent=2))
+    return data
+
+def create_cluster_vlans(cluster, childsubnets, diffed, cpinterface, active_vlans, passive_vlans=None):
     clvlan = {'name': '', 'interfaces': {}, 'members': {'update': [{'name': '', 'interfaces': [{'name': '', 'ipv4-address': '', 'ipv4-mask-length': ''}]}]}}
     clvlan['interfaces']['add'] = []
     clvlan['members']['update'] = []
@@ -172,7 +187,7 @@ def create_cluster_vlans():
                 b = dict(nodeifs)
                 b.update({'name': vlan['name'], 'ipv4-address': vlan['ipv4-address'], 'ipv4-mask-length': vlan['ipv4-mask-length']})
                 clvlan['members']['update'][0]['interfaces'].append(b)
-    if 'passive_vlans' in globals():
+    if passive_vlans:
         for node in passive_vlans:
             if node == 'name':
                 clvlan['members']['update'].append({'name': passive_vlans[node]})
@@ -187,7 +202,7 @@ def create_cluster_vlans():
     else:
         return False
 
-if __name__ == '__main__':
+def main():
     config = Config()
     ipamparams = dict(
         url=config.get_ipam_url(),
@@ -198,7 +213,7 @@ if __name__ == '__main__':
     )
     pi = phpypam.api(**ipamparams)
     parentsubnet = config.get_parentsubnet()
-    childsubnets = ipam_search_childsubnets(parentsubnet)
+    childsubnets = ipam_search_childsubnets(pi, parentsubnet)
     fwsections = fwsections_build(childsubnets)
     api_server = config.get_cp_management()
     cpusername = config.get_cp_username()
@@ -221,9 +236,9 @@ if __name__ == '__main__':
         else:
             print('Web API login succeeded')
         
-        target = mgmt_get_target(cppolicy)
+        target = mgmt_get_target(client_mgmt, cppolicy)
         #print('target:', target)
-        cluster = mgmt_get_cluster(target)
+        cluster = mgmt_get_cluster(client_mgmt, target)
         print('cluster:', cluster)
         hastatus = gaia_get_hastatus(cluster['ipv4-address'], cpusername, cppassword)
         #print('hastatus:', hastatus)
@@ -290,7 +305,7 @@ if __name__ == '__main__':
                             }
 
                     print('adding vlan', i['vlan-number'], 'to GW', active_name)
-                    active_vlans['interfaces'].append(gaia_add_vlanifs(vlan, activepeerid, cpnodenr))
+                    active_vlans['interfaces'].append(gaia_add_vlanifs(client_gaia, vlan, activepeerid, cpnodenr))
         if 'passive_name' in locals():
             passiveip = cluster['cluster-members'][passive_index]['ip-address']
             client_args_gaia = APIClientArgs(server=passiveip, unsafe=True, context='gaia_api')
@@ -317,11 +332,14 @@ if __name__ == '__main__':
                         passiveip = cluster['cluster-members'][passive_index]['ip-address']
 
                         print('adding vlan', i['vlan-number'], 'to GW', passive_name)
-                        passive_vlans['interfaces'].append(gaia_add_vlanifs(vlan, passivepeerid, cpnodenr))
+                        passive_vlans['interfaces'].append(gaia_add_vlanifs(client_gaia, vlan, passivepeerid, cpnodenr))
         #print('active vlans:', active_vlans)
         #print('passive_vlans:', passive_vlans)
 
-        cluster_vlans = create_cluster_vlans()
+        if passive_vlans:
+            cluster_vlans = create_cluster_vlans(cluster, childsubnets, diffed, cpinterface, active_vlans, passive_vlans)
+        else:
+            cluster_vlans = create_cluster_vlans(cluster, childsubnets, diffed, cpinterface, active_vlans)
         #print('create_cluster_vlans():', json.dumps(cluster_vlans, indent=2))
         if cluster_vlans:
             client_args_mgmt = APIClientArgs(server=api_server, unsafe=True)
@@ -336,14 +354,20 @@ if __name__ == '__main__':
                     print('Web API login succeeded')
 
                 print('adding interfaces to {} in management...'.format(cluster['name']))
-                add_vlanifs = mgmt_add_vlanifs(cluster_vlans)
+                add_vlanifs = mgmt_add_vlanifs(client_mgmt, cluster_vlans)
                 print('adding rule sections to policy {}...'.format(cppolicy))
-                add_sections = mgmt_add_sections(fwsections, cppolicy)
+                add_sections = mgmt_add_sections(client_mgmt, fwsections, cppolicy)
                 #print(cluster_vlans)
                 #print(add_vlanifs)
                 #print(add_sections)
                 print('publishing...')
-                mgmt_publish()
+                mgmt_publish(client_mgmt)
                 print('done publishing!')
         else:
             print('Nothing to do. Woop-de-doo.')
+            print('Discarding and logging out.')
+            mgmt_discard(client_mgmt)
+            mgmt_logout(client_mgmt)
+
+if __name__ == '__main__':
+    main()
