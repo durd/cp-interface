@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 
 import phpypam
+import urllib3
 from cpapi import APIClient, APIClientArgs
 
 # modules made for this project
 from config import Config
+
+# silence certificate warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def ipam_search_childsubnets(parentsubnet):
     parent = pi.get_entity('subnets', '/cidr/' + parentsubnet)
