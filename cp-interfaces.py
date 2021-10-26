@@ -241,7 +241,7 @@ def main():
         target = mgmt_get_target(client_mgmt, cppolicy)
         #print('target:', target)
         cluster = mgmt_get_cluster(client_mgmt, target)
-        print('cluster:', cluster)
+        print('cluster: {}'.format(cluster))
         hastatus = gaia_get_hastatus(cluster['ipv4-address'], cpusername, cppassword)
         #print('hastatus:', hastatus)
         if 'active' in hastatus['this-cluster-member']['status']:
@@ -259,13 +259,13 @@ def main():
                 i['status'] = 'active'
                 active_name = i['name']
                 active_vlans = {'name': active_name, 'interfaces': []}
-                print('active:', active_name)
+                print('active: {}'.format(active_name))
                 active_index = x
             else:
                 i['status'] = 'passive'
                 passive_name = i['name']
                 passive_vlans = {'name': passive_name, 'interfaces': []}
-                print('passive:', passive_name)
+                print('passive: {}'.format(passive_name))
                 passive_index = x
             x=x+1
 
@@ -298,7 +298,7 @@ def main():
 
             for i in childsubnets:
                 if i['vlan-number'] in diffed:
-                    print(i['vlan-number'] + ' - ' + i['subnet'] + '/' + i['mask'] + ' (' + i['description'] + ')')
+                    print({} - {}/{} ({}).format(i['vlan-number'], i['subnet'], i['mask'], i['description']))
                     vlan = {'parent': cpinterface,
                             'id': i['vlan-number'],
                             'ipv4-address': i['subnet'],
@@ -306,7 +306,7 @@ def main():
                             'comments': i['description']
                             }
 
-                    print('adding vlan', i['vlan-number'], 'to GW', active_name)
+                    print('adding vlan {} to GW {}'.format(i['vlan-number'], active_name))
                     active_vlans['interfaces'].append(gaia_add_vlanifs(client_gaia, vlan, activepeerid, cpnodenr))
         if passive_name:
             passiveip = cluster['cluster-members'][passive_index]['ip-address']
@@ -323,7 +323,7 @@ def main():
 
                 for i in childsubnets:
                     if i['vlan-number'] in diffed:
-                        print(i['vlan-number'] + ' - ' + i['subnet'] + '/' + i['mask'] + ' (' + i['description'] + ')')
+                        print({} - {}/{} ({}).format(i['vlan-number'], i['subnet'], i['mask'], i['description']))
                         vlan = {'parent': cpinterface,
                                 'id': i['vlan-number'],
                                 'ipv4-address': i['subnet'],
@@ -333,7 +333,7 @@ def main():
                         activeip = cluster['cluster-members'][active_index]['ip-address']
                         passiveip = cluster['cluster-members'][passive_index]['ip-address']
 
-                        print('adding vlan', i['vlan-number'], 'to GW', passive_name)
+                        print('adding vlan {} to GW {}'.format(i['vlan-number'], passive_name))
                         passive_vlans['interfaces'].append(gaia_add_vlanifs(client_gaia, vlan, passivepeerid, cpnodenr))
         #print('active vlans:', active_vlans)
         #print('passive_vlans:', passive_vlans)
@@ -365,6 +365,8 @@ def main():
                 print('publishing...')
                 mgmt_publish(client_mgmt)
                 print('done publishing!')
+                print('Logging out...')
+                mgmt_logout(client_mgmt)
         else:
             print('Nothing to do. Woop-de-doo.')
             print('Discarding and logging out.')
